@@ -1,0 +1,12 @@
+identidock:
+  build: .
+  ports:
+    - 5000:5000
+  environment:
+    ENV: DEV
+  links:
+    - dnmonster
+
+dnmonster:
+  image: amouat/dnmonster:1.0
+
