@@ -1,17 +1,20 @@
+// index.js
+
 'use strict';
 
-/* This application will simulate a conference. The first caller in the
-   bridge will hear music until a second person joins.
-*/
-
+var express = require('express');
+var app = express();
+var server = require('http').createServer(app);
+var io = require('socket.io')(server);
 var client = require('ari-client');
-var channelArray = []
+
 
 client.connect('http://localhost:8088', 'asterisk', 'asterisk')
   .then(function (ari) {
 
-    ari.on('StasisStart', function(event, incoming) {
+    var chanArr = []
 
+    ari.on('StasisStart', function(event, incoming) {
       incoming.answer()
         .then(function() {
           return getOrCreateBridge(incoming)
@@ -24,7 +27,6 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
 
 
     function getOrCreateBridge (channel) {
-
       return ari.bridges.list()
         .then(function (bridges) {
           var bridge = bridges.filter(function (candidate) {
@@ -42,16 +44,21 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
         });
     }
 
-    function joinBridge (bridge, channel)
-
+    function joinBridge (bridge, channel) {
       bridge.on('ChannelLeftBridge', function (event, instances) {
         console.log('Channel left the bridge: ' + event.channel.id);
         var b = instances.bridge;
+        if (b.channels.length === 1) {
+          b.startMoh()
+        }
         if (b.channels.length === 0 && b.id === bridge.id) {
           bridge.destroy()
             .catch(function (err) {});
         }
       });
+
+      chanArr.push({channel: channel.id})
+      io.emit('conference', {'bridge': bridge.id, 'channels': chanArr});
 
       console.log('Adding channel ' + channel.id + ' to bridge ' +  bridge.id);
       console.log('Channels in bridge:' +  bridge.channels.length);
@@ -63,12 +70,37 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
       }
 
       return bridge.addChannel({channel: channel.id})
-/*        .then(function (bridge) {
-          return channel.startMoh();
-        });*/
     }
 
     ari.start('bridge');
 
   }) // end ari client
   .done()
+
+
+app.use(express.static(__dirname + '/bower_components'));
+app.get('/', function(req, res,next) {
+    res.sendFile(__dirname + '/index.html');
+});
+
+var chats = [];
+
+io.on('connection', function(client) {
+    console.log('Client connected...');
+
+    client.on('join', function(data) {
+        console.log(data);
+        client.emit('messages', 'Hello from server');
+    });
+
+    client.on('messages', function(msg){
+      chats.push(msg)
+      client.emit('messages', msg);
+      client.emit('chats', chats)
+    });
+
+});
+
+
+console.log('Listening on port 8000');
+server.listen(8000);

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+    <head>
+      <script src="jquery/dist/jquery.js"></script>
+      <script src="handlebars/handlebars.js"></script>
+      <script src="/socket.io/socket.io.js"></script>
+
+      <style>
+        #messages { list-style-type: none; margin: 0; padding: 0; }
+        #messages li { padding: 5px 10px; }
+        #messages li:nth-child(odd) { background: #eee; }
+      </style>
+    </head>
+
+    <body>
+        <h1>Hello World!</h1>
+        <div id="future"></div>
+        <form id="form" id="chat_form">
+            <input id="chat_input" type="text">
+            <input type="submit" value="Send">
+        </form>
+         <ul id="messages"></ul>
+
+         <div id="content">
+         </div>
+
+
+         <script id="conf-template" type="text/x-handlebars-template">
+           <div class="conf">
+             <h2>Bridge: {{bridge}}</h2>
+             <ul>
+               {{#each channels}}
+               <li>channel: {{channel}}</li>
+               {{/each}}
+             </ul>
+           </div>
+         </script>
+
+    </body>
+
+</html>
+
+<script type="text/javascript">
+    var socket = io.connect('http://localhost:8000');
+    socket.on('connect', function(data) {
+      socket.emit('join', 'Hello World from client');
+    });
+
+    socket.on('messages', function(msg){
+      console.log(msg);
+      $('#messages').append($('<li>').text(msg));
+    });
+
+    $('form').submit(function(){
+      socket.emit('messages', $('#chat_input').val());
+      $('#chat_input').val('');
+      return false;
+    });
+
+    socket.on('chats', function(data){
+      console.log(data);
+    })
+
+    socket.on('conference', function(data) {
+      console.log(data);
+      var source   = $("#conf-template").html();
+      var template = Handlebars.compile(source);
+      var conference = data;
+      var html = template(conference)
+      $('#content').html(html);
+    })
+</script>

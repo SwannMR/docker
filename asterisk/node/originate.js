@@ -62,6 +62,7 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
       outgoing.once('StasisStart', function (event, outgoing) {
         console.log("Stasis Outgoing Channel");
         console.log(event.channel);
+
         var bridge = ari.Bridge();
 
         outgoing.once('StasisEnd', function (event, channel) {
@@ -71,9 +72,9 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
         outgoing.answer()
           .then(function () {
             console.log('Creating Bridge');
-            return bridge.create({type: 'mixing'});
+            return bridge.create({type: ['mixing', 'dtmf_events']});
           }).then(function (bridge) {
-            console.log('Bridging ' + incoming.id + ' and ' + outgoing.id);
+            console.log('Bridging ' + bridge.id + ' ' + incoming.id + ' and ' + outgoing.id);
             return bridge.addChannel({channel: [incoming.id, outgoing.id]});
           })
           .catch(function (err) {});

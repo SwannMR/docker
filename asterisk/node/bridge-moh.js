@@ -17,23 +17,29 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk',
   });
 
   function getOrCreateBridge (channel) {
-    ari.bridges.list(function (err, bridges) {
+    ari.bridges.list(
+
+    function (err, bridges) {
+
       var bridge = bridges.filter(function (candidate) {
-        return candidate['bridge_type'] === 'mixing';
+        return candidate['bridge_type'] === 'holding';
       })[0];
 
       if (!bridge) {
         bridge = ari.Bridge();
-        bridge.create({type: 'mixing'}, function (err, bridge) {
+        bridge.create({type: 'holding'},
+
+            function (err, bridge) {
+
           bridge.on('ChannelLeftBridge', function(event, instances) {
             cleanupBridge(event, instances, bridge);
           });
-          joinBridge(bridge, channel);
+          joinHoldingBridgeAndPlayMoh(bridge, channel);
         });
       } else {
         // Add incoming channel to existing holding bridge and play
         // music on hold
-        joinBridge(bridge, channel);
+        joinHoldingBridgeAndPlayMoh(bridge, channel);
       }
     });
   }
@@ -49,19 +55,13 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk',
   }
 
 
-  function joinBridge (bridge, channel) {
+  function joinHoldingBridgeAndPlayMoh (bridge, channel) {
 
-    if (bridge.channels.length > 0){
-      bridge.stopMoh()
-    }
-    else{
-      bridge.startMoh()
-    }
-    console.log('Adding channel ' + channel.id + ' to bridge ' +  bridge.id);
     bridge.addChannel({channel: channel.id}, function (err) {
+      channel.startMoh(function (err) {});
     });
   }
 
-
+  // can also use ari.start(['app-name'...]) to start multiple applications
   ari.start('bridge');
 });
