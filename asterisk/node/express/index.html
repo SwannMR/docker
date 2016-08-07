@@ -30,7 +30,7 @@
              <h2>Bridge: {{bridge}}</h2>
              <ul>
                {{#each channels}}
-               <li>channel: {{channel}}</li>
+               <li>channel: {{channel}} <button id="{{channel}}">Play Music</button></li>
                {{/each}}
              </ul>
            </div>
@@ -56,6 +56,12 @@
       $('#chat_input').val('');
       return false;
     });
+
+    $(document).on('click', 'button', function(event) {
+      var channel = event.target.id;
+      console.log('Play Monkeys');
+      socket.emit('sound', channel);
+    })
 
     socket.on('chats', function(data){
       console.log(data);

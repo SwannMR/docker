@@ -14,18 +14,6 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
 
     var chanArr = []
 
-    ari.on('StasisStart', function(event, incoming) {
-      incoming.answer()
-        .then(function() {
-          return getOrCreateBridge(incoming)
-        })
-        .then(function(bridge) {
-          return joinBridge(bridge, incoming)
-        })
-        .catch(function(err) {});
-    });
-
-
     function getOrCreateBridge (channel) {
       return ari.bridges.list()
         .then(function (bridges) {
@@ -72,6 +60,62 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
       return bridge.addChannel({channel: channel.id})
     }
 
+    function play (channel, sound) {
+      var playback = ari.Playback();
+      console.log('[play] ', channel);
+
+      return new Promise(function (resolve, reject) {
+        playback.on('PlaybackFinished', function (event, playback) {
+          resolve(playback);
+        });
+
+        channel.play({media: sound}, playback)
+          .catch(function (err) {
+            reject(err);
+          });
+      });
+    }
+
+    ari.on('StasisStart', function(event, incoming) {
+      incoming.answer()
+        .then(function() {
+          return getOrCreateBridge(incoming)
+        })
+        .then(function(bridge) {
+          return joinBridge(bridge, incoming)
+        })
+        .catch(function(err) {});
+    });
+
+
+    //////////////////
+    //// chat
+    //////////////////
+
+    var chats = [];
+
+    io.on('connection', function(client) {
+        console.log('Client connected...');
+
+        client.on('join', function(data) {
+            console.log(data);
+            client.emit('messages', 'Hello from server');
+        });
+
+        client.on('messages', function(msg){
+          chats.push(msg)
+          client.emit('messages', msg);
+          client.emit('chats', chats)
+        });
+
+        client.on('sound', function(channel){
+          console.log('Playing monkeys on channel ', channel);
+          play(channel, 'sound:tt-monkeys');
+        })
+
+    });
+
+
     ari.start('bridge');
 
   }) // end ari client
@@ -81,24 +125,6 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
 app.use(express.static(__dirname + '/bower_components'));
 app.get('/', function(req, res,next) {
     res.sendFile(__dirname + '/index.html');
-});
-
-var chats = [];
-
-io.on('connection', function(client) {
-    console.log('Client connected...');
-
-    client.on('join', function(data) {
-        console.log(data);
-        client.emit('messages', 'Hello from server');
-    });
-
-    client.on('messages', function(msg){
-      chats.push(msg)
-      client.emit('messages', msg);
-      client.emit('chats', chats)
-    });
-
 });
 
 
