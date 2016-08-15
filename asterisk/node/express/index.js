@@ -1,5 +1,6 @@
 // index.js
 
+
 'use strict';
 
 var express = require('express');
@@ -35,23 +36,6 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
 
     function joinBridge (bridge, channel) {
       console.log(c);
-
-      bridge.on('ChannelLeftBridge', function (event, instances) {
-        console.log('Channel left the bridge: ' + event.channel.id);
-        let i = c.indexOf(event.channel.id)
-        c.splice(i, 1)
-        console.log(c);
-        io.emit('conference', {'bridge': bridge.id, 'channels': chanArr});
-
-        var b = instances.bridge;
-        if (b.channels.length === 1) {
-          b.startMoh()
-        }
-        if (b.channels.length === 0 && b.id === bridge.id) {
-          bridge.destroy()
-            .catch(function (err) {});
-        }
-      });
 
       chanArr.push({channel: channel.id})
       c.push(channel.id)
@@ -97,9 +81,28 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
         .catch(function(err) {});
     });
 
-  //  ari.on('StasisEnd', function(event, channel) {
-  //    console.log('Channel ' +  channel.id + ' leaving the bridge');
-  //  })
+    ari.on('ChannelLeftBridge', function(event, instances) {
+
+      let b = instances.bridge;
+      console.log('Channel '+ event.channel.id + ' left the bridge: ' + b.id);
+      console.log('before splice: ' + c);
+      let i = c.indexOf(event.channel.id)
+      c.splice(i, 1)
+      console.log('after splice: ' + c);
+      chanArr = chanArr.filter(e => e.channel !== event.channel.id)
+      console.log(chanArr);
+
+      if (b.channels.length === 1) {
+        b.startMoh()
+      }
+      if (b.channels.length === 0) {
+        b.destroy()
+          .catch(function (err) {});
+      }
+
+      io.emit('conference', {'bridge': b.id, 'channels': chanArr});
+      
+    });
 
 
     //////////////////
