@@ -27,7 +27,7 @@
 
          <script id="conf-template" type="text/x-handlebars-template">
            <div class="conf">
-             <h2>Bridge: {{bridge}}</h2>
+             <h2 id="{{bridge}}">Bridge: {{bridge}}</h2>
              <ul>
                {{#each channels}}
                <li>channel: {{channel}} <button id="{{channel}}">Play Music</button></li>
@@ -59,7 +59,7 @@
 
     $(document).on('click', 'button', function(event) {
       var channel = event.target.id;
-      console.log('Play Monkeys');
+      console.log('Play Sound on ', channel);
       socket.emit('sound', channel);
     })
 

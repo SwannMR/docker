@@ -13,6 +13,7 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
   .then(function (ari) {
 
     var chanArr = []
+    var c = []
 
     function getOrCreateBridge (channel) {
       return ari.bridges.list()
@@ -33,8 +34,15 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
     }
 
     function joinBridge (bridge, channel) {
+      console.log(c);
+
       bridge.on('ChannelLeftBridge', function (event, instances) {
         console.log('Channel left the bridge: ' + event.channel.id);
+        let i = c.indexOf(event.channel.id)
+        c.splice(i, 1)
+        console.log(c);
+        io.emit('conference', {'bridge': bridge.id, 'channels': chanArr});
+
         var b = instances.bridge;
         if (b.channels.length === 1) {
           b.startMoh()
@@ -46,6 +54,7 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
       });
 
       chanArr.push({channel: channel.id})
+      c.push(channel.id)
       io.emit('conference', {'bridge': bridge.id, 'channels': chanArr});
 
       console.log('Adding channel ' + channel.id + ' to bridge ' +  bridge.id);
@@ -66,10 +75,11 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
 
       return new Promise(function (resolve, reject) {
         playback.on('PlaybackFinished', function (event, playback) {
+          console.log('playback finished');
           resolve(playback);
         });
 
-        channel.play({media: sound}, playback)
+        ari.channels.play({channelId: channel, media: sound}, playback)
           .catch(function (err) {
             reject(err);
           });
@@ -86,6 +96,10 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
         })
         .catch(function(err) {});
     });
+
+  //  ari.on('StasisEnd', function(event, channel) {
+  //    console.log('Channel ' +  channel.id + ' leaving the bridge');
+  //  })
 
 
     //////////////////
@@ -108,9 +122,9 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
           client.emit('chats', chats)
         });
 
-        client.on('sound', function(channel){
-          console.log('Playing monkeys on channel ', channel);
-          play(channel, 'sound:tt-monkeys');
+        client.on('sound', function(bridge){
+          console.log('Playing monkeys on channel ', bridge);
+          play(bridge, 'sound:tt-monkeys');
         })
 
     });

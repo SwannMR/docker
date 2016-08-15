@@ -11,7 +11,8 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
   .then(function (ari) {
 
     ari.on('StasisStart', function(event, incoming) {
-
+      let enswitchCallid = event.args[0];
+      console.log('Enswitch Callid ' + enswitchCallid);
       incoming.answer()
         .then(function() {
           return getOrCreateBridge(incoming)
@@ -42,7 +43,7 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
         });
     }
 
-    function joinBridge (bridge, channel)
+    function joinBridge (bridge, channel) {
 
       bridge.on('ChannelLeftBridge', function (event, instances) {
         console.log('Channel left the bridge: ' + event.channel.id);
@@ -55,6 +56,7 @@ client.connect('http://localhost:8088', 'asterisk', 'asterisk')
 
       console.log('Adding channel ' + channel.id + ' to bridge ' +  bridge.id);
       console.log('Channels in bridge:' +  bridge.channels.length);
+
       if (bridge.channels.length > 0){
         bridge.stopMoh()
       }
